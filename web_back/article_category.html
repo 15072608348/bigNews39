@@ -74,7 +74,7 @@
                 <tfoot>
                     <tr>
                         <td colspan="3" class="text-center">
-                            <a href="#" class="btn btn-success" data-toggle="modal" data-target="#addModal">新增分类</a>
+                            <a href="#" class="btn btn-success" id="xinzengfenlei" data-toggle="modal" data-target="#addModal">新增分类</a>
                         </td>
                     </tr>
                 </tfoot>
@@ -92,13 +92,16 @@
                 </div>
                 <div class="modal-body">
                     <form>
+                        <!-- 用一个文本框来保存当前编辑的分类id -->
+                       
+                        <input type="hidden" name="id" id="recipient-id">
                         <div class="form-group">
                             <label for="recipient-name" class="control-label">分类名称:</label>
-                            <input type="text" class="form-control" id="recipient-name">
+                            <input type="text" name="name" class="form-control" id="recipient-name">
                         </div>
                         <div class="form-group">
                             <label for="message-text" class="control-label">分类别名:</label>
-                            <input type="text" class="form-control" id="recipient-slug">
+                            <input type="text" name="slug" class="form-control" id="recipient-slug">
                         </div>
                     </form>
                 </div>
@@ -121,17 +124,7 @@
             $('#addModal').modal('hide');
         });
 
-        $('#').click(function () {
-            alert('add');
-            $('#addModal').modal('hide');
-        });
 
-        $('.category_table').delegate('a', 'click', function () {
-            if ($(this).hasClass('btn-info')) {
-                $('#addModal .modal-title').html('修改分类名称');
-                $('#addModal').modal('show');
-            }
-        })      
     </script>
 
     <!-- 准备一个模板 -->
@@ -141,8 +134,7 @@
                 <td>{{v.name}}</td>
                 <td>{{v.slug}}</td>
                 <td class="text-center">
-                <a href='javascript:editTr({&quot;id&quot;:&quot;2&quot;,&quot;slug&quot;:&quot;funny&quot;,&quot;name&quot;:&quot;未分类&quot;});' 
-                class="btn btn-info btn-xs">编辑</a>
+                <a href='#' data-id = "{{v.id}}" class="btn btn-info btn-xs">编辑</a>
                 <a href="#" data-id="{{v.id}}" class="btn btn-danger btn-xs btn-delete">删除</a>
                 </td>
             </tr>
@@ -150,18 +142,18 @@
     </script>
     <script>
         // 入口函数
-        $(function(){
+        $(function () {
             // 把获取所有文章分类并渲染到页面 这个代码封装成一个函数
-            function getData(){
+            function getData() {
                 // 1. 一进到页面发送ajax请求 获取所有的文章分类信息 
                 $.ajax({
-                    type:'get',
-                    url:'http://localhost:8080/admin/category/list',
-                    success:function(backData){
+                    type: 'get',
+                    url: 'http://127.0.0.1:8080/admin/category/list',
+                    success: function (backData) {
                         console.log(backData);
-                        if(backData.code == 200){
+                        if (backData.code == 200) {
                             // 2. 通过模板引擎渲染到页面
-                            var resHtml = template('cate_list',backData);
+                            var resHtml = template('cate_list', backData);
                             $('tbody').html(resHtml);
                         }
                     }
@@ -170,57 +162,79 @@
             // 需求: 一进到页面显示所有的文章类别
             getData();
 
-            // 需求: 给模态框中的 新增 按钮设置点击事件 完成新增
-            $('#model_add').on('click',function(){
-                // 新增逻辑
-                // 获取一下用户要新增的 分类名和分类别名
-            var cateName = $('#recipient-name').val().trim(); // 分类名
-            var cateSlug = $('#recipient-slug').val().trim(); // 分类别名
-                if(cateName == '' || cateSlug == ''){
-                    alert('请输入分类名或分类别名');
-                    return;
-                }
-            // 发送ajax请求,完成
-            $.ajax({
-                type:'post',
-                url:"http://localhost:8080/admin/category/add",
-                data:{
-                    name:cateName,
-                    slug:cateSlug
-                },
-                success:function(backData){
-                    if(backData.code == 201){
-                        // 重新渲染数据
-                        getData();
-                        //新增完成后 清除输入框
-                        var cateName = $('#recipient-name').val('');
-                        var cateSlug = $('#recipient-slug').val('');
+            // 需求: 给模态框中的 新增/修改 按钮设置点击事件 完成新增/修改
+            $('#model_add').on('click', function () {
+                // 判断一些你点的到底是新增还是修改
+                // 可以用当前点击时候显示的文本判断 也可以用是否拥有btn-success那个类判断
+                if ($(this).hasClass('btn-success')) {
+                    // 点击的修改 
+                    // 获取用户修改后的分类名和分类别名 还有当前要修改的分类id
+                    var data = $('form').serialize()
+                    console.log(data);
+                    // 发送ajax请求 完成修改
+                    $.ajax({
+                        type: "post",
+                        url: "http://localhost:8080/admin/category/edit",
+                        data: data,
+                        success: function (backData) {
+                            if (backData.code == 200) {
+                                // 修改成功后 重新加载数据显示 
+                                getData();
+                            }
+                        }
+                    })
+                } else {
+                    // 新增逻辑
+                    // 获取一下用户要新增的 分类名和分类别名
+                    var cateName = $('#recipient-name').val().trim(); // 分类名
+                    var cateSlug = $('#recipient-slug').val().trim(); // 分类别名
+                    if (cateName == '' || cateSlug == '') {
+                        alert('请输入分类名或分类别名');
+                        return;
                     }
+                    // 发送ajax请求,完成
+                    $.ajax({
+                        type: 'post',
+                        url: "http://localhost:8080/admin/category/add",
+                        data: {
+                            name: cateName,
+                            slug: cateSlug
+                        },
+                        success: function (backData) {
+                            if (backData.code == 201) {
+                                // 重新渲染数据
+                                getData();
+                                //新增完成后 清除输入框
+                                var cateName = $('#recipient-name').val('');
+                                var cateSlug = $('#recipient-slug').val('');
+                            }
+                        }
+                    });
                 }
+                // 隐藏模态框
+                $('#addModal').modal('hide');
             });
-            // 隐藏模态框
-            $('#addModal').modal('hide');
-            })
+
 
             // 需求: 删除文章类别
             //1.给删除按钮们设置点击事件(事件委托)
-            $('tbody').on('click','a.btn-delete',function(){
+            $('tbody').on('click', 'a.btn-delete', function () {
                 // (第二种方法)
                 var that = $(this);// 把当前点击的这个a标签存起来
                 // 2. 询问是否删除
-                if(confirm('确定要删除吗?')){
+                if (confirm('确定要删除吗?')) {
                     // 3. 获取当前删除按钮身上存在的id (data-id那个自定义属性保存的id)
                     var cateId = $(this).attr('data-id');
                     console.log(cateId);
                     // 4. 发送ajax请求 完成删除
                     $.ajax({
-                        type:'post',
-                        url:'http://127.0.0.1:8080/admin/category/delete',
-                        data:{
-                            id:cateId
+                        type: 'post',
+                        url: 'http://127.0.0.1:8080/admin/category/delete',
+                        data: {
+                            id: cateId
                         },
-                        success:function(backData){
-                            if(backData.code == 204){
+                        success: function (backData) {
+                            if (backData.code == 204) {
                                 // 重新渲染的数据
                                 getData();
 
@@ -229,7 +243,35 @@
                             }
                         }
                     })
-                }   
+                }
+            })
+
+
+            // 需求: 给编辑按钮们注册点击事件(委托注册)
+            $('tbody').on('click','a.btn-info',function(){
+                // 把弹出得模态框里面得样式修改一下(title,确认按钮得文本改成修改,修改背景色)
+                $('#addModal .modal-title').html('修改分类');
+                $('#model_add').text('修改').addClass('btn-success');
+
+                // 让弹出来得模态框里面得标签 显示要修改之前的内容
+                var cateId = $(this).attr('data-id');//分类id 
+                var cateName = $(this).parent().prev().prev().text().trim();//分类名
+                var cateSlug = $(this).parent().prev().text().trim();//分类别名
+                $('#recipient-id').val(cateId);
+                $('#recipient-name').val(cateName);
+                $('#recipient-slug').val(cateSlug);
+                console.log(cateId);
+
+                // 让模态框显示
+                $('#addModal').modal('show');
+            })
+            // 需求 点击新增分类按钮 修改弹出来的模态框中的样式 
+            $('#xinzengfenlei').on('click',function(){
+                // 把弹出来的模态框里面的样式修改一下(title,确认按钮的文本改成修改,修改背景色)
+                $('#addModal .modal-title').html('新增分类');
+                $('#model_add').text('新增').removeClass('btn-success');
+                // 让模态框显示
+                // $('#addModal').modal('show');
             })
         })
     </script>
